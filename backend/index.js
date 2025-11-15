@@ -12,9 +12,9 @@ const cloudinary = require('cloudinary').v2;
 
 // Apni Cloudinary details yahan daalein (ya .env file se)
 cloudinary.config({ 
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'YOUR_CLOUD_NAME', 
-    api_key: process.env.CLOUDINARY_API_KEY || 'YOUR_API_KEY', 
-    api_secret: process.env.CLOUDINARY_API_SECRET || 'YOUR_API_SECRET' 
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'Root', 
+    api_key: process.env.CLOUDINARY_API_KEY || '558482177117282', 
+    api_secret: process.env.CLOUDINARY_API_SECRET || 'i-hWMD3COFLN_nieBfadGVQJCSs' 
 });
 
 // Naya Multer Storage (ab yeh Cloudinary par save karega)
