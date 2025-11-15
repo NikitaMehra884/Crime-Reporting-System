@@ -121,15 +121,52 @@ function sendEmailNotification(complaintId, title, description, location, lat, l
     
     pool.query(emailQuery, (emailErr, users) => {
         if (!emailErr && users.length > 0) {
-            const emailList = users.map(user => user.email).join(', ');
+            const emailList = users.map(user => user.email);
             let googleMapsLink = (lat && lon) ? `https://www.google.com/maps?q=${lat},${lon}` : "#";
-            const mailOptions = {
-                from: `"Crime Reporting System" <${process.env.GMAIL_USER || 'YOUR_GMAIL_ID'}>`,
-                to: emailList,
-                subject: `🚨 New Complaint #${complaintId} at ${location}`,
-                html: `<p>New complaint: <b>${title}</b> at <b>${location}</b>. <a href="${googleMapsLink}">View Map</a></p>`
+
+            // --- YEH HAI AAPKA NAYA HTML EMAIL TEMPLATE ---
+            const htmlBody = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background-color: #333; color: white; padding: 20px;">
+                        <h2 style="margin: 0; color: #d32f2f; font-weight: bold;">🚨 New Crime Reported</h2>
+                    </div>
+                    <div style="padding: 25px; background-color: #222; color: #f1f1f1;">
+                        <p style="font-size: 16px;"><strong>Title:</strong> ${title}</p>
+                        <p style="font-size: 14px; line-height: 1.6;">
+                            <strong>Description:</strong> ${description}
+                        </p>
+                        <hr style="border: 0; border-top: 1px solid #444; margin: 20px 0;" />
+                        <h3 style="color: #f1f1f1;">Location Details</h3>
+                        <p style="font-size: 14px;"><strong>Reported Address:</strong> ${location}</p>
+                        
+                        ${lat && lon ? `
+                            <p style="font-size: 14px; margin-bottom: 20px;"><strong>Live GPS Location Detected:</strong></p>
+                            <a href="${googleMapsLink}" target="_blank" style="background-color: #1565C0; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                                📍 View Exact Location on Google Maps
+                            </a>
+                        ` : `
+                            <p style="color: #f4a261; font-weight: bold;">⚠️ User did not share GPS location.</p>
+                        `}
+                        
+                        <hr style="border: 0; border-top: 1px solid #444; margin: 25px 0;" />
+                        <p style="font-size: 12px; color: #888;">
+                            Please login to the <a href="https://crime-reporting-system-five.vercel.app/" style="color: #90caf9;">Police Dashboard</a> to view evidence (Photos/Videos) and take action.
+                        </p>
+                    </div>
+                </div>
+            `;
+            // --- HTML TEMPLATE KHATAM ---
+
+            const msg = {
+                to: emailList, 
+                from: 'YOUR_VERIFIED_SENDER_EMAIL@gmail.com', // !! YAHAN APNA VERIFIED EMAIL DAALEIN !!
+                subject: `🚨 ACTION REQUIRED: New Complaint #${complaintId} at ${location}`,
+                html: htmlBody // Naya HTML template yahan daala
             };
-            transporter.sendMail(mailOptions).catch(err => console.error("Email Failed (Background):", err.message));
+
+            sgMail.sendMultiple(msg)
+                .then(() => console.log('Notification email sent successfully via SendGrid.'))
+                .catch(err => console.error("SendGrid Error (Background):", err.message));
         }
     });
 }
