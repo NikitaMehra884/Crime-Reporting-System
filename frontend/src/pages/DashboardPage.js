@@ -17,7 +17,7 @@ function DashboardPage() {
 
     // --- Data Fetching ---
     useEffect(() => {
-        axios.get('http://localhost:5000/api/complaints')
+        axios.get('https://crime-backend-ptv8.onrender.com/api/complaints')
             .then(response => {
                 setComplaints(response.data);
             })
@@ -37,7 +37,7 @@ function DashboardPage() {
 
     // --- Status Change Handler ---
     const handleStatusChange = (complaintId, newStatus) => {
-        axios.put(`http://localhost:5000/api/complaints/status/${complaintId}`, { status: newStatus })
+        axios.put(`https://crime-backend-ptv8.onrender.com/api/complaints/status/${complaintId}`, { status: newStatus })
         .then(response => {
             alert("Status Updated Successfully!");
             setComplaints(prev => prev.map(c => c.complaint_id === complaintId ? { ...c, status: newStatus } : c));
@@ -131,7 +131,7 @@ function DashboardPage() {
                                         {complaint.evidence_url ? (
                                             <Button 
                                                 variant="outlined" size="small"
-                                                href={`http://localhost:5000/${complaint.evidence_url}`}
+                                                href={`https://crime-backend-ptv8.onrender.com/${complaint.evidence_url}`}
                                                 target="_blank"
                                             >
                                                 View

@@ -20,7 +20,7 @@ function AuthProvider({ children }) {
     const login = (username, password) => {
         return new Promise((resolve, reject) => {
             // Backend ko ab role nahi bhej rahe hain
-            axios.post('http://localhost:5000/api/login', { username, password })
+            axios.post('https://crime-backend-ptv8.onrender.com/api/login', { username, password })
                 .then(response => {
                     const loggedInUser = response.data.user;
                     setUser(loggedInUser);

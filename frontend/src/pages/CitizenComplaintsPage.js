@@ -28,7 +28,7 @@ function CitizenComplaintsPage() {
         if (user && user.user_id) {
             // !! YEH HAI FIX !!
             // Backend route: /api/complaints/citizen/:userId
-            axios.get(`http://localhost:5000/api/complaints/citizen/${user.user_id}`)
+            axios.get(`https://crime-backend-ptv8.onrender.com/api/complaints/citizen/${user.user_id}`)
                 .then(response => {
                     console.log("Complaints fetched:", response.data); // Console mein check karne ke liye
                     setMyComplaints(response.data);
@@ -107,7 +107,7 @@ function CitizenComplaintsPage() {
                                             <Button 
                                                 variant="outlined"
                                                 size="small"
-                                                href={`http://localhost:5000/${complaint.evidence_url}`}
+                                                href={`https://crime-backend-ptv8.onrender.com/${complaint.evidence_url}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                             >
