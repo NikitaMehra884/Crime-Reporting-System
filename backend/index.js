@@ -8,7 +8,23 @@ const nodemailer = require('nodemailer');
 
 // --- 2. Express app ko setup karna ---
 const app = express();
-app.use(cors());
+
+const allowedOrigins = [
+    'https://crime-reporting-system-five.vercel.app', // Yahan aapka Vercel link hai
+    // Agar aap local par test karna chahte hain toh yeh rakhein, warna hata dein
+    'http://localhost:3000' 
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Check karo ki request kahan se aa rahi hai
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true); // Allow karo
+        } else {
+            callback(new Error('CORS Error: This origin is not allowed.')); // Block karo
+        }
+    }
+}));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
