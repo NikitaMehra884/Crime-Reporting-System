@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-// CircularProgress aur Alert ko neeche waali line se hata diya gaya hai
+// Unused imports (Alert, CircularProgress) hata diye hain
 import { TextField, Button, Container, Typography, Box } from '@mui/material'; 
 import { AuthContext } from '../context/AuthContext';
 import { UploadFile, LocationOn } from '@mui/icons-material';
@@ -33,7 +33,7 @@ function ComplaintForm() {
         if (!navigator.geolocation) {
             setLocationStatus('ERROR: Geolocation is not supported by your browser');
         } else {
-            setLocationStatus('Waiting for permission... (Please click "Allow")');
+            setLocationStatus('Locating...');
             navigator.geolocation.getCurrentPosition(
                 // Success: Jab user 'Allow' karta hai
                 (position) => {
@@ -72,16 +72,17 @@ function ComplaintForm() {
             formData.append('evidence', evidenceFile);
         }
 
+        // --- Render URL (Online Backend) ---
         axios.post('https://crime-backend-ptv8.onrender.com/api/complaints', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         })
         .then(response => {
             alert('Complaint Filed Successfully!'); 
-            navigate('/'); 
+            navigate('/'); // Wapis home page par bhej do
         })
         .catch(error => {
             console.error(error);
-            alert('Failed to file complaint.');
+            alert('Failed to file complaint. Please try again.');
         });
     };
 
@@ -120,17 +121,16 @@ function ComplaintForm() {
                     <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>{fileName}</Typography>
                 </Box>
 
-                {/* --- 3. SUBMIT BUTTON (LOCKED) --- */}
+                {/* --- 3. SUBMIT BUTTON (LOCKED until location found) --- */}
                 <Button 
                     type="submit" 
                     variant="contained" 
                     color="primary" 
                     fullWidth 
                     sx={{ mt: 3, py: 1.5 }}
-                    // YEH HAI MAIN LOGIC: Jab tak 'lat' (latitude) nahi milta, button disabled rahega
                     disabled={!lat} 
                 >
-                    {lat ? "Submit Complaint" : "Please Share Location to Submit"}
+                    {lat ? "Submit Complaint" : "Share Location First"}
                 </Button>
             </Box>
         </Container>
