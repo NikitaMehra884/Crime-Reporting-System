@@ -1,46 +1,36 @@
 import React, { useState, useContext } from 'react';
-import { useNavigate, useParams } from 'react-router-dom'; // <-- useParams ko import karein
+import { useNavigate, Link as RouterLink } from 'react-router-dom'; // Link ko import kiya
 import { AuthContext } from '../context/AuthContext';
-import { TextField, Button, Container, Typography, Box } from '@mui/material';
-import { Person, LocalPolice, AdminPanelSettings } from '@mui/icons-material'; // Icons
+import { TextField, Button, Container, Typography, Box, Link } from '@mui/material'; // MUI Link ko bhi import kiya
+import { LockOpen } from '@mui/icons-material'; // Login icon
 
 function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [error, setError] = useState(''); // Error message ke liye
     
-    const { login } = useContext(AuthContext);
+    const { login } = useContext(AuthContext); // Context se 'login' function nikala
     const navigate = useNavigate();
-    const { role } = useParams(); // <-- URL se role nikaal rahe hain (citizen, police, admin)
-
-    // Capitalize function (e.g., 'citizen' -> 'Citizen')
-    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-    
-    // Role ke hisaab se icon dikhayein
-    const getIcon = () => {
-        if (role === 'police') return <LocalPolice sx={{ fontSize: 40, mb: 2 }} />;
-        if (role === 'admin') return <AdminPanelSettings sx={{ fontSize: 40, mb: 2 }} />;
-        return <Person sx={{ fontSize: 40, mb: 2 }} />;
-    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        setError('');
+        setError(''); // Purana error saaf karo
 
-        // Ab 'login' function mein 'role' bhi bhej rahe hain
-        login(username, password, role)
+        // Context wala simple login function call kiya (bina role ke)
+        login(username, password)
             .then(data => {
-                navigate('/'); // Login successful, home page par bhej do (App.js logic handle karega)
+                // Login successful, ab App.js logic humein sahi dashboard par bhej dega
+                navigate('/'); 
             })
             .catch(err => {
-                setError(err.message || 'Login failed');
+                setError(err.message || 'Invalid username or password'); // Error state set karo
             });
     };
 
     return (
         <Container maxWidth="xs"> {/* Chhota container (xs) login form ke liye best hai */}
             <Box component="form" onSubmit={handleSubmit} sx={{ 
-                mt: 4, 
+                mt: 8, // Thoda aur neeche
                 p: 4, 
                 boxShadow: 3, 
                 borderRadius: 2, 
@@ -49,16 +39,16 @@ function LoginPage() {
                 flexDirection: 'column',
                 alignItems: 'center'
             }}>
-                {getIcon()}
-                <Typography variant="h4" gutterBottom align="center" sx={{ fontWeight: 700 }}>
-                    {capitalize(role)} Login
+                <LockOpen sx={{ fontSize: 40, mb: 2, color: 'primary.main' }} />
+                <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
+                    User Login
                 </Typography>
                 
                 <TextField
                     label="Username"
                     fullWidth
                     required
-                    margin="normal"
+                    margin="normal" // mt: 3 ki jagah
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                 />
@@ -72,8 +62,9 @@ function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                 />
                 
+                {/* Agar error hai, toh yahan dikhao */}
                 {error && (
-                    <Typography color="error" align="center" sx={{ mt: 2 }}>
+                    <Typography color="error" align="center" sx={{ mt: 2, width: '100%' }}>
                         {error}
                     </Typography>
                 )}
@@ -83,10 +74,17 @@ function LoginPage() {
                     variant="contained" 
                     color="primary" 
                     fullWidth 
-                    sx={{ mt: 3, py: 1.5 }}
+                    sx={{ mt: 3, mb: 2, py: 1.5 }} // mb: 2 (neeche margin)
                 >
                     Login
                 </Button>
+
+                {/* Register ka Link */}
+                <Box sx={{ textAlign: 'center', width: '100%' }}>
+                    <Link component={RouterLink} to="/register" variant="body2">
+                        {"Don't have an account? Register Here"}
+                    </Link>
+                </Box>
             </Box>
         </Container>
     );

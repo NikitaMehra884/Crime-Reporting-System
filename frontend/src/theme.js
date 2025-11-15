@@ -1,98 +1,69 @@
 import { createTheme } from '@mui/material/styles';
 
-// Yeh hamari "Master Style" file hai (Police Dark Mode)
 const theme = createTheme({
-    // Palette (Color Scheme) - Police DARK MODE Theme
-    // ... (theme.js ka baaki code) ...
-
+    // Nayi Blue/White Palette
     palette: {
-        mode: 'dark', // <-- YEH HAI MAIN CHANGE
+        mode: 'light', // Light Mode (White Background)
         primary: {
-            main: '#D32F2F', // Red ko thoda bright kar rahe hain dark mode ke liye
+            main: '#1565C0', // Police Blue color (aapke screenshot jaisa)
         },
         secondary: {
-            main: '#BCA474', // Khaki (Gold jaisa lagega)
+            main: '#D32F2F', // Alert Red
         },
-       background: {
-   default: 'transparent', // <-- YEH HAI FINAL FIX // Poora page ka background (Dark Navy Blue)
-    paper: '#27303a',   // Box/Card ka background (Lighter Navy Blue)
-},
+        background: {
+            default: '#FFFFFF', // Pure White Background
+            paper: '#F5F5F5',   // Cards/Forms ke liye halka Grey
+        },
         text: {
-            primary: '#ffffff', // Saara text white
-            secondary: '#b0bec5', // Halka text (greyish)
+            primary: '#000000', // Black text
+            secondary: '#555555', // Grey text
         }
     },
-
-// ... (theme.js ka baaki code) ...
-
-    // Typography (Fonts)
+    // Naya Font
     typography: {
         fontFamily: "'Roboto', sans-serif",
         h4: {
-            fontWeight: 700, // Heading ko thoda bold rakho
-            fontSize: '2.2rem',
+            fontWeight: 700,
         },
-    },
-
-    // Shape (Border Radius)
-    shape: {
-        borderRadius: 12, // Components ko thoda rounded (modern) look dega
-    },
-
-    // Component Overrides (Specific component style)
-    components: {
-        MuiCssBaseline: {
-        styleOverrides: {
-            body: {
-                backgroundImage: `url('/background.webp')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center center',
-                backgroundAttachment: 'fixed',
-                backgroundColor: 'rgba(0, 0, 0, 0.7)', // 70% black overlay
-                backgroundBlendMode: 'multiply',
-            }
+        h2: {
+            fontWeight: 700,
+        },
+        h5: {
+            fontWeight: 300,
         }
     },
-        // Button ka default style badal rahe hain
+    // Naya Shape
+    shape: {
+        borderRadius: 4, // Thoda sharp/official look
+    },
+    // Naye Component Styles
+    components: {
         MuiButton: {
             styleOverrides: {
                 root: {
-                    textTransform: 'none', // 'SUBMIT' ki jagah 'Submit' dikhayega
-                    fontWeight: 500,
+                    textTransform: 'none',
+                    fontWeight: 600,
                     padding: '10px 20px',
-                    borderRadius: 8, // Buttons ko bhi rounded rakho
                 },
             },
         },
-        // Form fields ka style
-        MuiTextField: {
-            defaultProps: {
-                variant: 'outlined',
-            }
-        },
-        // Box ka naya style (Dark Mode ke liye)
-        MuiBox: {
+        // Navbar ka color (aapke screenshot jaisa)
+        MuiAppBar: {
             styleOverrides: {
                 root: {
-                    '&[component="form"]': {
-                        // paper color (Light Navy) ab theme se aayega
-                        padding: '24px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.4)', // Shadow thodi gehri
-                        border: '1px solid', // Border add kiya
-                        borderColor: 'rgba(255, 255, 255, 0.1)' // Halka white border
-                    }
+                    backgroundColor: '#0D47A1', // Deep Blue Navbar
+                    color: '#FFFFFF' // <-- YEH HAI NAYA CHANGE (Text color white)
                 }
             }
         },
-        // Dashboard Table (Paper) par bhi border
         MuiPaper: {
             styleOverrides: {
                 root: {
-                    border: '1px solid',
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                    // Cards/Forms par halki shadow
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                 }
             }
-        },
+        }
     }
 });
 

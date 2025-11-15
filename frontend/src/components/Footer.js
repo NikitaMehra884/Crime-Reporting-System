@@ -1,103 +1,71 @@
 import React from 'react';
-import { Box, Container, Typography, Link, Grid, IconButton } from '@mui/material';
-import { Phone, Email, LocationOn, Facebook, Twitter } from '@mui/icons-material'; // Icons
+import { Box, Container, Grid, Typography, Link, IconButton } from '@mui/material';
+import { Phone, Email, LocationOn, Facebook, Twitter, Instagram } from '@mui/icons-material';
 
 function Footer() {
     return (
-        // Box component footer ke liye container ka kaam karega
         <Box 
             component="footer" 
             sx={{
-                py: 4, // Padding upar-neeche
-                px: 2, // Padding left-right
-                mt: 'auto', // Yeh footer ko page ke bottom mein push karega
-                backgroundColor: (theme) => 
-                    theme.palette.mode === 'dark' ? '#27303a' : '#0D47A1', // Dark mode mein Lighter Navy, Light mode mein Deep Blue
-                color: 'white', // Text color white
-                borderTop: '4px solid', // Upar ek line
-                borderColor: 'secondary.main' // Khaki color ki line (Theme se)
+                bgcolor: '#0a1929', // Very Dark Blue (Official Look)
+                color: 'white',
+                py: 6,
+                mt: 'auto',
+                borderTop: '4px solid #D32F2F' // Red Line on top
             }}
         >
             <Container maxWidth="lg">
-                <Grid container spacing={4} justifyContent="space-between">
-
-                    {/* Section 1: Contact Info */}
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                            Contact Us
+                <Grid container spacing={4}>
+                    
+                    {/* Contact Info */}
+                    <Grid item xs={12} sm={4}>
+                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: '#90caf9' }}>
+                            Help Desk
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <LocationOn sx={{ mr: 1, fontSize: '1.2rem' }} />
-                            <Typography variant="body2">
-                                [Police Station Address], Nainital, Uttarakhand
-                            </Typography>
+                        <Box sx={{ display: 'flex', mb: 1 }}>
+                            <LocationOn sx={{ mr: 1, color: '#90caf9' }} />
+                            <Typography variant="body2">12 Subhash Road, Police Headquarters, Dehradun, Uttarakhand 248001</Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Phone sx={{ mr: 1, fontSize: '1.2rem' }} />
-                            <Typography variant="body2">
-                                +91 [Police Station Phone]
-                            </Typography>
+                        <Box sx={{ display: 'flex', mb: 1 }}>
+                            <Phone sx={{ mr: 1, color: '#90caf9' }} />
+                            <Typography variant="body2">9411112985</Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Email sx={{ mr: 1, fontSize: '1.2rem' }} />
-                            <Typography variant="body2">
-                                [Police Station Email]
-                            </Typography>
+                        <Box sx={{ display: 'flex', mb: 1 }}>
+                            <Email sx={{ mr: 1, color: '#90caf9' }} />
+                            <Typography variant="body2">dgc-police-ua@nic.in</Typography>
                         </Box>
                     </Grid>
 
-                    {/* Section 2: Quick Links */}
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    {/* Policies / Links */}
+                    <Grid item xs={12} sm={4}>
+                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: '#90caf9' }}>
+                            Our Policies
+                        </Typography>
+                        <Link href="#" color="inherit" display="block" sx={{ mb: 1, textDecoration: 'none', '&:hover': { color: '#90caf9' } }}>Accessibility Statement</Link>
+                        <Link href="#" color="inherit" display="block" sx={{ mb: 1, textDecoration: 'none', '&:hover': { color: '#90caf9' } }}>Privacy Policy</Link>
+                        <Link href="#" color="inherit" display="block" sx={{ mb: 1, textDecoration: 'none', '&:hover': { color: '#90caf9' } }}>Hyperlinking Policy</Link>
+                        <Link href="#" color="inherit" display="block" sx={{ mb: 1, textDecoration: 'none', '&:hover': { color: '#90caf9' } }}>Copyright Policy</Link>
+                    </Grid>
+
+                    {/* Quick Links */}
+                    <Grid item xs={12} sm={4}>
+                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: '#90caf9' }}>
                             Quick Links
                         </Typography>
-                        {/* Aap yahan important websites ke link daal sakte hain */}
-                        <Link href="https://uttarakhandpolice.uk.gov.in/" color="inherit" display="block" variant="body2" sx={{ mb: 0.5, '&:hover': { textDecoration: 'underline' } }}>
-                            Uttarakhand Police Website
-                        </Link>
-                        <Link href="#" color="inherit" display="block" variant="body2" sx={{ mb: 0.5, '&:hover': { textDecoration: 'underline' } }}>
-                            National Crime Records Bureau
-                        </Link>
-                        <Link href="#" color="inherit" display="block" variant="body2" sx={{ mb: 0.5, '&:hover': { textDecoration: 'underline' } }}>
-                            Report Cyber Crime
-                        </Link>
+                        <Link href="#" color="inherit" display="block" sx={{ mb: 1, textDecoration: 'none', '&:hover': { color: '#90caf9' } }}>Organization Setup</Link>
+                        <Link href="#" color="inherit" display="block" sx={{ mb: 1, textDecoration: 'none', '&:hover': { color: '#90caf9' } }}>Who's Who</Link>
+                        <Link href="#" color="inherit" display="block" sx={{ mb: 1, textDecoration: 'none', '&:hover': { color: '#90caf9' } }}>RTI</Link>
+                        
+                        <Box sx={{ mt: 2 }}>
+                            <IconButton color="inherit"><Facebook /></IconButton>
+                            <IconButton color="inherit"><Twitter /></IconButton>
+                            <IconButton color="inherit"><Instagram /></IconButton>
+                        </Box>
                     </Grid>
-
-                    {/* Section 3: Emergency Numbers */}
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                            Emergency Numbers
-                        </Typography>
-                        <Typography variant="body2" sx={{ mb: 0.5 }}>Police: 112 / 100</Typography>
-                        <Typography variant="body2" sx={{ mb: 0.5 }}>Fire: 101</Typography>
-                        <Typography variant="body2" sx={{ mb: 0.5 }}>Ambulance: 102 / 108</Typography>
-                        <Typography variant="body2" sx={{ mb: 0.5 }}>Women Helpline: 1090</Typography>
-                    </Grid>
-
-                    {/* Section 4: Social Media */}
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                            Follow Us
-                        </Typography>
-                        <IconButton href="#" color="inherit" aria-label="Facebook">
-                            <Facebook />
-                        </IconButton>
-                        <IconButton href="#" color="inherit" aria-label="Twitter">
-                            <Twitter />
-                        </IconButton>
-                        {/* Aap aur social media icons add kar sakte hain */}
-                    </Grid>
-
                 </Grid>
-                
-                {/* Copyright Text */}
-                <Typography variant="body2" align="center" sx={{ mt: 4, borderTop: '1px solid rgba(255, 255, 255, 0.2)', pt: 2 }}>
-                    {'Copyright © '}
-                    <Link color="inherit" href="#">
-                        Police Citizen Portal, Nainital
-                    </Link>{' '}
-                    {new Date().getFullYear()}
-                    {'. All rights reserved.'}
+
+                <Typography variant="body2" align="center" sx={{ mt: 5, opacity: 0.7, borderTop: '1px solid rgba(255,255,255,0.1)', pt: 2 }}>
+                    © 2025 Uttarakhand Police - All Rights Reserved.
                 </Typography>
             </Container>
         </Box>

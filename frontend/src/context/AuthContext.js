@@ -16,11 +16,11 @@ function AuthProvider({ children }) {
         }
     }, []);
 
-   // Login function (ab 'role' bhi lega)
-    const login = (username, password, role) => {
+  // Login function (Simple version, bina role ke)
+    const login = (username, password) => {
         return new Promise((resolve, reject) => {
-            // 'role' ko backend par bhej rahe hain
-            axios.post('http://localhost:5000/api/login', { username, password, role })
+            // Backend ko ab role nahi bhej rahe hain
+            axios.post('http://localhost:5000/api/login', { username, password })
                 .then(response => {
                     const loggedInUser = response.data.user;
                     setUser(loggedInUser);

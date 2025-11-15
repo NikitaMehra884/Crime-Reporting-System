@@ -2,50 +2,21 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 
-// MUI Components (Aesthetic Table ke liye)
+// MUI Components
 import { 
-    Table, 
-    TableBody, 
-    TableCell, 
-    TableContainer, 
-    TableHead, 
-    TableRow, 
-    Paper, 
-    Typography, 
-    TablePagination,
-    Box,
-    Select, 
-    MenuItem
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
+    Paper, Typography, TablePagination, Box, Select, MenuItem, Button 
 } from '@mui/material';
 
+// 'Description' icon hata diya kyunki use nahi ho raha tha
+import { LocationOn, Map } from '@mui/icons-material'; 
+
 function DashboardPage() {
-    // --- NAYA: Function to handle status change ---
-const handleStatusChange = (complaintId, newStatus) => {
-    axios.put(`http://localhost:5000/api/complaints/${complaintId}/status`, { 
-        status: newStatus 
-        // Abhi remarks nahi bhej rahe hain, simple rakhte hain
-    })
-    .then(response => {
-        alert(response.data.message);
-        // Status change hone ke baad complaints list ko update karo
-        setComplaints(prevComplaints => 
-            prevComplaints.map(c => 
-                c.complaint_id === complaintId ? { ...c, status: newStatus } : c
-            )
-        );
-    })
-    .catch(error => {
-        console.error("Error updating status:", error);
-        alert("Failed to update status.");
-    });
-};
-// --- Status Change Function Khatam ---
     const [complaints, setComplaints] = useState([]);
-    const { user } = useContext(AuthContext); // Logged-in user ka data
+    const { user } = useContext(AuthContext); 
 
     // --- Data Fetching ---
     useEffect(() => {
-        // Page load hote hi saari complaints fetch karo
         axios.get('http://localhost:5000/api/complaints')
             .then(response => {
                 setComplaints(response.data);
@@ -53,92 +24,128 @@ const handleStatusChange = (complaintId, newStatus) => {
             .catch(error => {
                 console.error("Failed to fetch complaints:", error);
             });
-    }, []); // `[]` ka matlab hai yeh sirf ek baar chalega
+    }, []);
 
-    // --- Pagination State (Table ke pages ke liye) ---
+    // --- Pagination ---
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
-    };
-
+    const handleChangePage = (event, newPage) => setPage(newPage);
     const handleChangeRowsPerPage = (event) => {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
     };
 
-    // --- Render (UI) ---
+    // --- Status Change Handler ---
+    const handleStatusChange = (complaintId, newStatus) => {
+        axios.put(`http://localhost:5000/api/complaints/status/${complaintId}`, { status: newStatus })
+        .then(response => {
+            alert("Status Updated Successfully!");
+            setComplaints(prev => prev.map(c => c.complaint_id === complaintId ? { ...c, status: newStatus } : c));
+        })
+        .catch(error => alert("Failed to update status."));
+    };
+
     return (
-        // Paper component theme se shadow aur border radius le lega
-        <Paper sx={{ width: '100%', overflow: 'hidden', mt: 2 }}>
-            <Box sx={{ p: 3 }}>
-                <Typography variant="h4" gutterBottom component="div">
-                    Admin Dashboard
+        <Paper sx={{ width: '100%', overflow: 'hidden', mt: 2, boxShadow: 3, borderRadius: 2 }}>
+            <Box sx={{ p: 3, backgroundColor: '#f5f5f5', borderBottom: '1px solid #e0e0e0' }}>
+                <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#1565C0' }}>
+                    Police Dashboard (Live Monitoring)
                 </Typography>
-                <Typography variant="h6" component="div" sx={{ color: 'text.secondary' }}>
-                    ({user.role === 'admin' ? 'Higher Authority' : 'Police Station'})
+                <Typography variant="subtitle1" sx={{ color: 'text.secondary' }}>
+                    User: {user.role === 'admin' ? 'Higher Authority' : 'Police Officer'}
                 </Typography>
             </Box>
 
             <TableContainer sx={{ maxHeight: 600 }}> 
                 <Table stickyHeader aria-label="sticky table">
-                    {/* Table ka Header */}
                     <TableHead>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Title</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Location</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Reported On</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', bgcolor: '#E3F2FD' }}>ID</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', bgcolor: '#E3F2FD' }}>Title</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', bgcolor: '#E3F2FD', minWidth: '250px' }}>Description</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', bgcolor: '#E3F2FD' }}>Reported Address</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', bgcolor: '#E3F2FD' }}>GPS Location</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', bgcolor: '#E3F2FD' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', bgcolor: '#E3F2FD' }}>Evidence</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', bgcolor: '#E3F2FD' }}>Date</TableCell>
                         </TableRow>
                     </TableHead>
                     
-                    {/* Table ki Body (Data) */}
                     <TableBody>
                         {complaints
                             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                             .map((complaint) => (
                                 <TableRow hover key={complaint.complaint_id}>
                                     <TableCell>{complaint.complaint_id}</TableCell>
-                                    <TableCell>{complaint.title}</TableCell>
-                                    <TableCell>{complaint.description}</TableCell>
-                                    <TableCell>{complaint.location}</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>{complaint.title}</TableCell>
                                     
-                                    {/* Status ke liye alag color */}
-                                    {/* --- NAYA: Status Dropdown --- */}
-                    <TableCell>
-                        <Select
-                            value={complaint.status}
-                            onChange={(e) => handleStatusChange(complaint.complaint_id, e.target.value)}
-                            size="small"
-                            sx={{ 
-                                minWidth: 120,
-                                fontWeight: 'bold',
-                                color: complaint.status === 'Pending' ? 'secondary.main' : (complaint.status === 'Resolved' ? 'green' : 'primary.main'),
-                                '& .MuiSelect-select': { padding: '5px 10px' } 
-                            }}
-                        >
-                            <MenuItem value="Pending">Pending</MenuItem>
-                            <MenuItem value="In Progress">In Progress</MenuItem>
-                            <MenuItem value="Resolved">Resolved</MenuItem>
-                            <MenuItem value="Rejected">Rejected</MenuItem>
-                        </Select>
-                    </TableCell>
-                    {/* --- Status Dropdown Khatam --- */}
-
-                                    {/* Date ko format karna */}
-                                    <TableCell>
-                                        {new Date(complaint.created_at).toLocaleString()}
+                                    {/* Description Data */}
+                                    <TableCell sx={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                                        {complaint.description}
                                     </TableCell>
+
+                                    {/* Manual Address */}
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <LocationOn sx={{ color: 'gray', mr: 0.5, fontSize: 18 }} />
+                                            {complaint.location}
+                                        </Box>
+                                    </TableCell>
+                                    
+                                    {/* GPS Map Link */}
+                                    <TableCell>
+                                        {complaint.latitude && complaint.longitude ? (
+                                            <Button 
+                                                variant="contained" 
+                                                color="error" 
+                                                size="small"
+                                                startIcon={<Map />}
+                                                href={`https://www.google.com/maps?q=${complaint.latitude},${complaint.longitude}`}
+                                                target="_blank"
+                                                sx={{ textTransform: 'none', borderRadius: 20 }}
+                                            >
+                                                Track
+                                            </Button>
+                                        ) : (
+                                            <Typography variant="caption" color="textSecondary">Not Shared</Typography>
+                                        )}
+                                    </TableCell>
+
+                                    {/* Status Dropdown */}
+                                    <TableCell>
+                                        <Select
+                                            value={complaint.status}
+                                            onChange={(e) => handleStatusChange(complaint.complaint_id, e.target.value)}
+                                            size="small"
+                                            sx={{ minWidth: 120, fontSize: '0.875rem', bgcolor: 'white' }}
+                                        >
+                                            <MenuItem value="Pending">Pending</MenuItem>
+                                            <MenuItem value="In Progress">In Progress</MenuItem>
+                                            <MenuItem value="Resolved">Resolved</MenuItem>
+                                            <MenuItem value="Rejected">Rejected</MenuItem>
+                                        </Select>
+                                    </TableCell>
+
+                                    {/* Evidence Button */}
+                                    <TableCell>
+                                        {complaint.evidence_url ? (
+                                            <Button 
+                                                variant="outlined" size="small"
+                                                href={`http://localhost:5000/${complaint.evidence_url}`}
+                                                target="_blank"
+                                            >
+                                                View
+                                            </Button>
+                                        ) : "-"}
+                                    </TableCell>
+
+                                    <TableCell>{new Date(complaint.created_at).toLocaleDateString()}</TableCell>
                                 </TableRow>
                             ))}
                     </TableBody>
                 </Table>
             </TableContainer>
             
-            {/* Table ka Pagination (Next/Previous Page) */}
             <TablePagination
                 rowsPerPageOptions={[10, 25, 100]}
                 component="div"
@@ -150,7 +157,6 @@ const handleStatusChange = (complaintId, newStatus) => {
             />
         </Paper>
     );
-    
 }
 
 export default DashboardPage;

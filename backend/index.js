@@ -1,44 +1,51 @@
 // --- 1. Tools ko import karna ---
 const express = require('express');
-const mysql = require('mysql2');
+const mysql = require('mysql2'); // Hum 'mysql2' ka use kar rahe hain
 const cors = require('cors');
-const multer = require('multer'); // <-- NAYA: Multer ko import kiya
-const path = require('path'); // <-- NAYA: File path ke liye 'path' package
-const nodemailer = require('nodemailer'); // <-- Email ke liye Nodemailer ko import kiya
-
+const multer = require('multer');
+const path = require('path');
+const nodemailer = require('nodemailer');
 
 // --- 2. Express app ko setup karna ---
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// --- NAYA: 'uploads' folder ko public banana ---
-// Isse humara frontend images ko dekh payega
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- 3. Database Connection ---
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'Nikita@987', // !! YAHAN APNA PASSWORD DAALEIN !!
-    database: 'crime_db'
+// --- 3. Database Connection (POOL BANANA - YEH HAI FIX) ---
+// createConnection ki jagah createPool ka istemaal
+// --- 3. Database Connection (Aiven Cloud) ---
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,      // e.g., mysql-service.aivencloud.com
+    user: 'avnadmin',                            // Aiven User (usually avnadmin)
+    password: process.env.DB_PASSWORD, // Aiven Password
+    database: 'defaultdb',                       // Aiven DB Name (usually defaultdb)
+    port: 25890,                                 // Aiven Port (Number hona chahiye, e.g. 25431)
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    ssl: { rejectUnauthorized: false }           // <-- YEH LINE AIVEN KE LIYE ZAROORI HAI
 });
 
-db.connect((err) => {
+// Check karte hain ki Pool connect hua ya nahi
+pool.getConnection((err, connection) => {
     if (err) {
-        console.error('Database connection failed:', err.stack);
+        console.error('Database pool connection failed:', err.stack);
         return;
     }
-    console.log('Successfully connected to database (crime_db).');
+    console.log('Successfully connected to database (crime_db) using pool.');
+    connection.release(); // Connection ko waapis pool mein bhej do
 });
-// --- NAYA: Email Transporter Setup (Using Gmail) ---
-// IMPORTANT: Aapko apne Gmail account mein 'App Password' generate karna hoga.
-//            Google par search karein "Gmail App Password"
+
+// --- Email Transporter Setup ---
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Hum Gmail use kar rahe hain
+    host: 'smtp.gmail.com', // 'service: gmail' hata kar 'host' use karein
+    port: 587,              // Port 587 use karein (yeh kam block hota hai)
+    secure: false,          // 587 ke liye secure: false rakhein
+    requireTLS: true,       // TLS zaroori hai
     auth: {
         user: 'nikitamehra898@gmail.com', // !! YAHAN APNA GMAIL ID DAALEIN !!
-        pass: 'oiuu frnn jjid mcor'    // !! YAHAN GMAIL KA APP PASSWORD DAALEIN !! (Normal password nahi)
+        pass: 'oiuu frnn jjid mcor'    // !! YAHAN GMAIL KA APP PASSWORD DAALEIN !!
     }
 });
 
@@ -49,21 +56,20 @@ transporter.verify((error, success) => {
         console.log('Email transporter is ready to send emails.');
     }
 });
-// --- Email Setup Khatam ---
-// --- NAYA: Multer (File Storage) ka Setup ---
+
+// --- Multer (File Storage) ka Setup ---
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/'); // Images ko 'uploads/' folder mein save karo
+        cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
-        // File ka naam unique banao (Date + Original Naam)
         cb(null, Date.now() + '-' + file.originalname);
     }
 });
-
 const upload = multer({ storage: storage });
 
 // --- 5. API Routes (URLs) ---
+// Har jagah 'db.query' ko 'pool.query' se badal diya gaya hai
 
 // Test Route
 app.get('/', (req, res) => {
@@ -74,7 +80,9 @@ app.get('/', (req, res) => {
 app.post('/api/register', (req, res) => {
     const { username, password, email, full_name, role } = req.body;
     const sql = "INSERT INTO Users (username, password, email, full_name, role) VALUES (?, ?, ?, ?, ?)";
-    db.query(sql, [username, password, email, full_name, role], (err, result) => {
+    
+    // db.query -> pool.query
+    pool.query(sql, [username, password, email, full_name, role], (err, result) => {
         if (err) {
             console.error(err);
             return res.status(500).send({ message: 'Error registering user', error: err });
@@ -83,71 +91,98 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// Route 2: File Complaint (UPDATE HO GAYA)
-// Pehle yeh sirf JSON leta tha, ab yeh 'FormData' (text + file) lega
-// 'upload.single('evidence')' ka matlab hai ki 'evidence' naam ki ek file aa rahi hai
+
+// Route 2: File Complaint (With Location, Video & New Email Format)
 app.post('/api/complaints', upload.single('evidence'), (req, res) => {
     
-    // Text data ab 'req.body' mein aayega
-    const { user_id, title, description, location } = req.body;
+    // 1. Data nikaalo (Latitude/Longitude ke saath)
+    const { user_id, title, description, location, latitude, longitude } = req.body;
     
-    // NAYA: File ka path (link) 'req.file' se aayega
-    // Hum 'uploads\' ko '/' se replace kar rahe hain taaki URL sahi bane
+    // Null check for location
+    const lat = (latitude === 'null' || latitude === 'undefined') ? null : latitude;
+    const lon = (longitude === 'null' || longitude === 'undefined') ? null : longitude;
+    
+    // Video/Image path fix
     const evidenceUrl = req.file ? req.file.path.replace(/\\/g, '/') : null; 
 
-    // NAYA: SQL query mein 'evidence_url' add ho gaya hai
-    const sql = "INSERT INTO Complaints (user_id, title, description, location, evidence_url) VALUES (?, ?, ?, ?, ?)";
+    // 2. Database mein save karo
+    const sql = "INSERT INTO Complaints (user_id, title, description, location, latitude, longitude, evidence_url) VALUES (?, ?, ?, ?, ?, ?, ?)";
     
-    db.query(sql, [user_id, title, description, location, evidenceUrl], (err, result) => {
+    pool.query(sql, [user_id, title, description, location, lat, lon, evidenceUrl], (err, result) => {
         if (err) {
             console.error(err);
             return res.status(500).send({ message: 'Error filing complaint', error: err });
         }
+        
         res.status(201).send({ message: 'Complaint filed successfully!', complaint_id: result.insertId });
-        // --- NAYA: Email Notification Logic ---
-                const complaintId = result.insertId;
-                const complaintTitle = title; // Use the title from req.body
 
-                // 1. Police/Admin ke emails fetch karo
-                const emailQuery = "SELECT email FROM Users WHERE (role = 'police' OR role = 'admin') AND email IS NOT NULL";
-                db.query(emailQuery, (emailErr, users) => {
-                    if (emailErr) {
-                        console.error("Error fetching user emails for notification:", emailErr);
-                        // Email nahi gaya toh bhi complaint submit ho chuki hai, isliye error mat bhejo
-                    } else if (users.length > 0) {
+        // 3. Email Notification Logic (Updated HTML)
+        const complaintId = result.insertId;
+        const emailQuery = "SELECT email FROM Users WHERE (role = 'police' OR role = 'admin') AND email IS NOT NULL";
+        
+        pool.query(emailQuery, (emailErr, users) => {
+            if (emailErr) { 
+                console.error("Error fetching emails:", emailErr);
+            } 
+            else if (users.length > 0) {
+                const emailList = users.map(user => user.email).join(', ');
+                
+                // Google Maps Link banana
+                let googleMapsLink = "#";
+                if (lat && lon) {
+                    googleMapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
+                }
 
-                        // 2. Sabhi ko email bhejo
-                        const emailList = users.map(user => user.email).join(', '); // Comma-separated list banao
-
-                        const mailOptions = {
-                            from: '"Crime Reporting System" <nikitamehra898@gmail.com>', // Sender ka naam aur email (Gmail ID)
-                            to: emailList, // Sabhi police/admin ko bhejo
-                            subject: `New Complaint Registered (#${complaintId})`, // Email ka subject
-                            text: `A new complaint has been registered in the portal.\n\nComplaint ID: ${complaintId}\nTitle: ${complaintTitle}\n\nPlease log in to the dashboard to view details and take action.`, // Plain text body
-                            html: `<p>A new complaint has been registered in the portal.</p>
-                                   <p><b>Complaint ID:</b> ${complaintId}</p>
-                                   <p><b>Title:</b> ${complaintTitle}</p>
-                                   <p>Please log in to the dashboard to view details and take action.</p>` // HTML body (optional)
-                        };
-
-                        // 3. Email bhejne ki koshish karo
-                        transporter.sendMail(mailOptions, (mailError, info) => {
-                            if (mailError) {
-                                console.error('Error sending notification email:', mailError);
-                            } else {
-                                console.log('Notification email sent successfully to:', emailList);
+                const mailOptions = {
+                    from: `"Crime Reporting System" <nikitamehra898@gmail.com>`, // !! APNA EMAIL YAHAN CHECK KAREIN !!
+                    to: emailList,
+                    subject: `🚨 ACTION REQUIRED: New Complaint #${complaintId} at ${location}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; border: 1px solid #ddd; padding: 20px; max-width: 600px; border-top: 5px solid #d32f2f;">
+                            <h2 style="color: #d32f2f;">New Crime Reported</h2>
+                            <p><strong>Title:</strong> ${title}</p>
+                            <p><strong>Description:</strong> ${description}</p>
+                            <hr style="border: 0; border-top: 1px solid #eee;" />
+                            
+                            <h3>📍 Location Details</h3>
+                            <p><strong>Reported Address:</strong> ${location}</p>
+                            
+                            ${lat && lon ? 
+                                `<p style="margin-top: 15px;">
+                                    <strong>Live GPS Location Detected:</strong><br/><br/>
+                                    <a href="${googleMapsLink}" style="background-color: #1565C0; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                                        📍 View Exact Location on Google Maps
+                                    </a>
+                                </p>` 
+                                : 
+                                `<p style="color: red; font-weight: bold;">⚠️ User did not share GPS location.</p>`
                             }
-                        });
+                            
+                            <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
+                            <p style="font-size: 12px; color: #666;">
+                                Please login to the <a href="http://localhost:3000">Police Dashboard</a> to view evidence (Photos/Videos) and take action.
+                            </p>
+                        </div>
+                    `
+                };
+
+                transporter.sendMail(mailOptions, (mailError, info) => {
+                    if (mailError) {
+                        console.error('Error sending notification email:', mailError);
+                    } else {
+                        console.log('Notification email sent successfully to:', emailList);
                     }
                 });
-                // --- Email Notification Logic Khatam ---
+            }
+        });
     });
 });
 
-// Route 3: Get all Complaints
+// Route 3: Get all Complaints (Yeh Police/Admin Dashboard ke liye hai)
 app.get('/api/complaints', (req, res) => {
     const sql = "SELECT * FROM Complaints ORDER BY created_at DESC";
-    db.query(sql, (err, results) => {
+    // db.query -> pool.query
+    pool.query(sql, (err, results) => {
         if (err) {
             console.error(err);
             return res.status(500).send({ message: 'Error fetching complaints', error: err });
@@ -156,15 +191,17 @@ app.get('/api/complaints', (req, res) => {
     });
 });
 
-// Route 4: Login
+/// Route 4: Login (Fixed - No Role Required)
 app.post('/api/login', (req, res) => {
-    const { username, password, role } = req.body;
-    if (!role) {
-        return res.status(400).send({ message: 'Role is required' });
-    }
-    const sql = "SELECT * FROM Users WHERE username = ? AND password = ? AND role = ?";
-    db.query(sql, [username, password, role], (err, results) => {
+    const { username, password } = req.body; // Sirf username aur password lo
+
+    // Humne role ka check hata diya hai
+    
+    const sql = "SELECT * FROM Users WHERE username = ? AND password = ?";
+    
+    pool.query(sql, [username, password], (err, results) => {
         if (err) {
+            console.error(err);
             return res.status(500).send({ message: 'Database error', error: err });
         }
         if (results.length > 0) {
@@ -172,64 +209,48 @@ app.post('/api/login', (req, res) => {
             delete user.password;
             res.status(200).send({ message: 'Login successful!', user: user });
         } else {
-            res.status(401).send({ message: 'Invalid credentials or wrong portal' });
+            res.status(401).send({ message: 'Invalid username or password' });
         }
     });
 });
-// --- NAYE ROUTES ---
 
-// Route 5: Update Complaint Status (Police/Admin ke liye)
-// Yeh PUT request lega, e.g., /api/complaints/5/status
-app.put('/api/complaints/:complaintId/status', (req, res) => {
-    const { complaintId } = req.params; // URL se complaint ID nikalo
-    const { status, remarks } = req.body; // Body se naya status aur remarks nikalo
-
-    // Validate status (optional but good practice)
-    const validStatuses = ['Pending', 'In Progress', 'Resolved', 'Rejected'];
-    if (!validStatuses.includes(status)) {
-        return res.status(400).send({ message: 'Invalid status value' });
-    }
-
-    // SQL query to update status and remarks
-    const sql = "UPDATE Complaints SET status = ?, remarks = ? WHERE complaint_id = ?";
-    
-    db.query(sql, [status, remarks || null, complaintId], (err, result) => {
-        if (err) {
-            console.error("Error updating status:", err);
-            return res.status(500).send({ message: 'Error updating complaint status', error: err });
-        }
-        if (result.affectedRows === 0) {
-            // Agar us ID ki complaint mili hi nahi
-            return res.status(404).send({ message: 'Complaint not found' });
-        }
-        res.status(200).send({ message: 'Complaint status updated successfully!' });
-    });
-});
-
-// Route 6: Get ONLY My Complaints (Citizen ke liye)
-// Yeh GET request lega, e.g., /api/my-complaints?userId=3
-app.get('/api/my-complaints', (req, res) => {
-    const userId = req.query.userId; // URL query se user ID nikalo (e.g., ?userId=1)
-
-    if (!userId) {
-        return res.status(400).send({ message: 'User ID is required' });
-    }
-
-    // SQL query sirf us user ki complaints layega
+// Route 5: Get complaints for a specific citizen (Citizen "My Complaints" page)
+app.get('/api/complaints/citizen/:userId', (req, res) => {
+    const { userId } = req.params;
     const sql = "SELECT * FROM Complaints WHERE user_id = ? ORDER BY created_at DESC";
     
-    db.query(sql, [userId], (err, results) => {
+    pool.query(sql, [userId], (err, results) => {
         if (err) {
-            console.error("Error fetching user complaints:", err);
-            return res.status(500).send({ message: 'Error fetching complaints', error: err });
+            console.error(err);
+            return res.status(500).send({ message: 'Error fetching your complaints', error: err });
         }
-        res.status(200).json(results); // User ki complaints bhej do
+        // Yeh citizen ki complaints bhejega
+        res.status(200).json(results);
     });
 });
 
-// --- NAYE ROUTES KHATAM ---
+// Route 6: Update complaint status (Police/Admin Dashboard se)
+app.put('/api/complaints/status/:id', (req, res) => {
+    const { id } = req.params; // Complaint ki ID
+    const { status } = req.body; // Naya status (jaise 'In Progress')
+
+    const sql = "UPDATE Complaints SET status = ? WHERE complaint_id = ?";
+    
+    pool.query(sql, [status, id], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).send({ message: 'Error updating status', error: err });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).send({ message: 'Complaint not found' });
+        }
+        res.status(200).send({ message: 'Status updated successfully' });
+    });
+});
+
 // --- 6. Server ko 'ON' karna ---
 const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`Backend server is running on http://localhost:${PORT}`);
 });
+

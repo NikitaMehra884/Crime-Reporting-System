@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { Link as RouterLink } from 'react-router-dom'; // Link ke liye
+import { Link as RouterLink } from 'react-router-dom';
 
-// MUI Components
+// Material-UI components
 import { 
     Table, 
     TableBody, 
@@ -13,31 +13,33 @@ import {
     TableRow, 
     Paper, 
     Typography, 
-    Box,
-    Button, // Nayi complaint file karne ke liye button
-    Chip // Status ko achhe se dikhane ke liye
+    Box, 
+    Button, 
+    Chip 
 } from '@mui/material';
-import { AddCircleOutline } from '@mui/icons-material'; // Icon
+import { AddCircleOutline } from '@mui/icons-material';
 
 function CitizenComplaintsPage() {
     const [myComplaints, setMyComplaints] = useState([]);
-    const { user } = useContext(AuthContext); // Logged-in citizen ka data
+    const { user } = useContext(AuthContext);
 
     // --- Data Fetching ---
     useEffect(() => {
-        if (user) { // Agar user logged-in hai
-            // Naye API route ko call karo
-            axios.get(`http://localhost:5000/api/my-complaints?userId=${user.user_id}`)
+        if (user && user.user_id) {
+            // !! YEH HAI FIX !!
+            // Backend route: /api/complaints/citizen/:userId
+            axios.get(`http://localhost:5000/api/complaints/citizen/${user.user_id}`)
                 .then(response => {
+                    console.log("Complaints fetched:", response.data); // Console mein check karne ke liye
                     setMyComplaints(response.data);
                 })
                 .catch(error => {
                     console.error("Failed to fetch my complaints:", error);
                 });
         }
-    }, [user]); // Jab 'user' change hoga (login hone par), tab fetch karo
+    }, [user]);
 
-    // Status ke hisaab se color return karega
+    // Status ke hisaab se color
     const getStatusColor = (status) => {
         switch (status) {
             case 'Pending': return 'warning';
@@ -52,17 +54,16 @@ function CitizenComplaintsPage() {
         <Paper sx={{ width: '100%', overflow: 'hidden', mt: 2 }}>
             <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h4" component="div">
-                    My Complaints
+                    My Complaints History
                 </Typography>
-                {/* Nayi Complaint file karne ka button */}
                 <Button 
                     variant="contained" 
                     color="primary" 
                     startIcon={<AddCircleOutline />}
-                    component={RouterLink} // Yeh button ek link ki tarah kaam karega
-                    to="/new-complaint"   // '/new-complaint' page par jayega
+                    component={RouterLink} 
+                    to="/new-complaint"
                 >
-                    File New Complaint
+                    File New Complaint (FIR)
                 </Button>
             </Box>
 
@@ -74,7 +75,7 @@ function CitizenComplaintsPage() {
                             <TableCell sx={{ fontWeight: 'bold' }}>Title</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Location</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Reported On</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>Current Status</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Police Remarks</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Evidence</TableCell>
                         </TableRow>
@@ -82,7 +83,9 @@ function CitizenComplaintsPage() {
                     <TableBody>
                         {myComplaints.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center">You have not filed any complaints yet.</TableCell>
+                                <TableCell colSpan={7} align="center">
+                                    You have not filed any complaints yet. Click 'File New Complaint' to start.
+                                </TableCell>
                             </TableRow>
                         ) : (
                             myComplaints.map((complaint) => (
@@ -91,7 +94,6 @@ function CitizenComplaintsPage() {
                                     <TableCell>{complaint.title}</TableCell>
                                     <TableCell>{complaint.location}</TableCell>
                                     <TableCell>{new Date(complaint.created_at).toLocaleString()}</TableCell>
-                                    {/* Status ko Chip (badge) ki tarah dikhao */}
                                     <TableCell>
                                         <Chip 
                                             label={complaint.status} 
@@ -99,9 +101,7 @@ function CitizenComplaintsPage() {
                                             size="small"
                                         />
                                     </TableCell>
-                                    {/* Police Remarks dikhao (agar hain toh) */}
                                     <TableCell>{complaint.remarks || '-'}</TableCell> 
-                                    {/* Evidence Link */}
                                     <TableCell>
                                         {complaint.evidence_url ? (
                                             <Button 
@@ -123,7 +123,6 @@ function CitizenComplaintsPage() {
                     </TableBody>
                 </Table>
             </TableContainer>
-            {/* Yahan Pagination add kar sakte hain agar complaints bahut zyada hon */}
         </Paper>
     );
 }

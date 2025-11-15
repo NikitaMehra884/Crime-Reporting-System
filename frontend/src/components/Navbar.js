@@ -1,7 +1,9 @@
 import React, { useContext } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+// Chip ko import list se hata diya hai
+import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material'; 
+import { WarningAmber } from '@mui/icons-material';
 
 function Navbar() {
     const { user, logout } = useContext(AuthContext);
@@ -9,73 +11,90 @@ function Navbar() {
 
     const handleLogout = () => {
         logout();
-        navigate('/'); // Logout ke baad home page (portal) par bhej do
+        navigate('/'); 
     };
 
     return (
-        // AppBar (Main Navbar)
-        <AppBar position="static" elevation={1} sx={{ backgroundColor: 'background.paper' }}>
+        <AppBar position="static" elevation={4} sx={{ backgroundColor: '#0D47A1', color: '#FFFFFF' }}>
             <Toolbar>
-                {/* Logo / Title */}
-                {/* Hum yahan example ke liye Indian State Emblem use kar rahe hain */}
+                {/* Logo */}
                 <img 
                     src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/1200px-Emblem_of_India.svg.png" 
                     alt="State Emblem" 
-                    style={{ height: '40px', marginRight: '16px' }} 
+                    style={{ height: '45px', marginRight: '15px', filter: 'brightness(0) invert(1)' }} 
                 />
+                
+                {/* Title */}
                 <Typography 
                     variant="h6" 
                     component="div" 
-                    sx={{ flexGrow: 1, fontWeight: 700, color: 'primary.main' }}
+                    sx={{ flexGrow: 1, fontWeight: 700, color: 'inherit' }} 
                 >
                     Police Citizen Portal
                 </Typography>
 
-                {/* Links */}
+                {/* --- FAKE COMPLAINT ALERT (Right Side) --- */}
+                <Box 
+                    sx={{ 
+                        display: { xs: 'none', md: 'flex' }, 
+                        alignItems: 'center', 
+                        backgroundColor: '#ffcdd2', // Light Red background
+                        color: '#b71c1c',           // Dark Red text
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        marginRight: 2,
+                        border: '1px solid #b71c1c'
+                    }}
+                >
+                    <WarningAmber sx={{ fontSize: '1.2rem', mr: 1 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                        WARNING: False complaints are punishable under IPC Section 182.
+                    </Typography>
+                </Box>
+
+                {/* User Links */}
                 <Box>
-                    {/* Yeh check karega ki user logged-in hai ya nahi */}
                     {user && (
                         <>
-                            {/* Welcome Message */}
                             <Typography 
                                 component="span" 
-                                sx={{ mr: 3, color: 'text.secondary' }}
+                                sx={{ mr: 3, fontSize: '0.9rem', fontWeight: 500, color: '#E3F2FD' }} 
                             >
-                                Welcome, {user.full_name || user.username}!
+                                Welcome, {user.full_name || user.username}
                             </Typography>
                             
-                            {/* File Complaint Button (agar user citizen hai aur home par nahi hai) */}
-                            {user.role === 'citizen' && window.location.pathname !== '/' && (
+                            {user.role === 'citizen' && (
                                 <Button 
-                                component={RouterLink} 
-                                to="/new-complaint" // 
-                                sx={{ mr: 1, color: 'text.primary' }}
-                            >
-                                File Complaint
-                            </Button>
+                                    component={RouterLink} 
+                                    to="/new-complaint"
+                                    color="inherit" 
+                                    sx={{ mr: 1, fontWeight: 600 }}
+                                >
+                                    File Complaint
+                                </Button>
                             )}
-                            {/* Dashboard Button (agar user police/admin hai aur home par nahi hai) */}
-                            {(user.role === 'police' || user.role === 'admin') && window.location.pathname !== '/' && (
+                            
+                            {(user.role === 'police' || user.role === 'admin') && (
                                 <Button 
                                     component={RouterLink} 
                                     to="/" 
-                                    sx={{ mr: 1, color: 'text.primary' }}
+                                    color="inherit" 
+                                    sx={{ mr: 1, fontWeight: 600 }}
                                 >
                                     Dashboard
                                 </Button>
                             )}
 
-                            {/* Logout Button */}
                             <Button 
                                 variant="outlined" 
-                                color="secondary" 
+                                color="inherit" 
                                 onClick={handleLogout}
+                                sx={{ borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: '#fff', backgroundColor: 'rgba(255,255,255,0.1)' } }}
                             >
                                 Logout
                             </Button>
                         </>
                     )}
-                    {/* Logged-out state (Login/Register buttons) ab yahan nahi hai */}
                 </Box>
             </Toolbar>
         </AppBar>

@@ -1,0 +1,14 @@
+# Dependencies (Inhe upload nahi karna)
+node_modules/
+**/node_modules/
+
+# Uploaded Images (Inhe bhi nahi)
+uploads/
+**/uploads/
+
+# Environment variables
+.env
+
+# System files
+.DS_Store
+Thumbs.db

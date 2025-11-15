@@ -1,59 +1,95 @@
-// ... baaki imports
-
 import React, { useContext } from 'react';
-
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext } from './context/AuthContext';
-import { Container } from '@mui/material'; // Container ko import karein
+import { Container, Box } from '@mui/material'; 
 
-// Pages and Components
-import Navbar from './components/Navbar'; // Naya Navbar import karein
+// --- Humare Saare Pages aur Components ---
+import Navbar from './components/Navbar';
+import AlertSlider from './components/AlertSlider'; // Top wala slider
+import BottomHelpline from './components/BottomHelpline';
+import Footer from './components/Footer'; 
+import CitizenComplaintsPage from './pages/CitizenComplaintsPage'; 
 import ComplaintForm from './components/ComplaintForm';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage'; // <-- YEH LINE ADD KAREIN
-import HomePage from './pages/HomePage';
-import CitizenComplaintsPage from './pages/CitizenComplaintsPage';
-import Footer from './components/Footer';
+import DashboardPage from './pages/DashboardPage'; 
+import LandingPage from './pages/LandingPage'; 
+
+// --- NAYE INFO PAGES (Jo warning de rahe the) ---
+import CitizenServices from './pages/CitizenServices';
+import CyberCrimeInfo from './pages/CyberCrimeInfo';
+import LawInfo from './pages/LawInfo';
+
 function App() {
   const { user } = useContext(AuthContext);
 
   return (
     <BrowserRouter>
-      <div className="App">
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh', 
+        bgcolor: 'background.default' 
+      }}>
         
-        {/* Puraani Nav ki jagah naya AppBar Navbar */}
         <Navbar />
-
-        {/* Pages ko ek Container mein daal rahe hain taaki side se padding rahe */}
-        <Container component="main" maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        
-           <Routes>
+<AlertSlider />
+        <Box sx={{ flexGrow: 1 }}>
+          <Routes>
             
-            {/* Login aur Register ke Routes */}
-            <Route path="/login/:role" element={!user ? <LoginPage /> : <Navigate to="/" />} /> {/* <-- :role add kiya */}
-            <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" />} />
+            {/* --- YEH LINES MISSING THIN (Ab add kar di hain) --- */}
+            <Route path="/citizen-services" element={<CitizenServices />} />
+            <Route path="/cyber-crime" element={<CyberCrimeInfo />} />
+            <Route path="/law-rti" element={<LawInfo />} />
+            
+            {/* --- Baaki ke Routes --- */}
             <Route 
-          path="/new-complaint" 
-          element={
-            user && user.role === 'citizen' ? <ComplaintForm /> : <Navigate to="/" />
-          } 
-        />
+              path="/login" 
+              element={
+                !user ? (
+                  <Container maxWidth="xs" sx={{ mt: 8, mb: 4 }}><LoginPage /></Container>
+                ) : <Navigate to="/" />
+              } 
+            />
+            <Route 
+              path="/register" 
+              element={
+                !user ? (
+                  <Container maxWidth="sm" sx={{ mt: 8, mb: 4 }}><RegisterPage /></Container>
+                ) : <Navigate to="/" />
+              } 
+            />
+            <Route 
+              path="/new-complaint" 
+              element={
+                user && user.role === 'citizen' ? (
+                  <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}><ComplaintForm /></Container>
+                ) : <Navigate to="/login" />
+              } 
+            />
+            
             {/* Home Page Route */}
             <Route 
               path="/" 
               element={
-            !user ? ( <HomePage /> ) :                     
-            (user.role === 'citizen') ? ( <CitizenComplaintsPage /> ) : // <-- YEH CHANGE HUA HAI
-            ( <DashboardPage /> )                         
-          }
+                !user ? ( 
+                    <LandingPage /> 
+                ) : 
+                (user.role === 'citizen') ? ( 
+                    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}><CitizenComplaintsPage /></Container> 
+                ) : 
+                ( 
+                    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}><DashboardPage /></Container> 
+                )
+              } 
             />
 
           </Routes>
-        </Container>
-        
-      </div>
-      <Footer />
+        </Box>
+        <BottomHelpline />
+        <Footer /> 
+
+      </Box>
     </BrowserRouter>
   );
 }

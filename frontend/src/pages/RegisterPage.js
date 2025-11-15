@@ -87,7 +87,7 @@ function RegisterPage() {
                     onChange={(e) => setRole(e.target.value)}
                 >
                     <MenuItem value="citizen">Citizen (Aam Nagrik)</MenuItem>
-                    <MenuItem value="police">Police</MenuItem>
+                    
                     {/* <MenuItem value="admin">Admin</MenuItem> */}
                 </TextField>
 
