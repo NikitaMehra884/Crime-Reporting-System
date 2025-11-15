@@ -1,3 +1,4 @@
+require('dotenv').config();
 // --- 1. Tools ko import karna ---
 const express = require('express');
 const mysql = require('mysql2'); // Hum 'mysql2' ka use kar rahe hain
@@ -32,16 +33,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // createConnection ki jagah createPool ka istemaal
 // --- 3. Database Connection (Aiven Cloud) ---
 const pool = mysql.createPool({
-    host: process.env.DB_HOST,      // e.g., mysql-service.aivencloud.com
-    user: 'avnadmin',                            // Aiven User (usually avnadmin)
-    password: process.env.DB_PASSWORD, // Aiven Password
-    database: 'defaultdb',                       // Aiven DB Name (usually defaultdb)
-    port: 25890,                                 // Aiven Port (Number hona chahiye, e.g. 25431)
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    connectTimeout: 60000,
-    ssl: { rejectUnauthorized: false }           // <-- YEH LINE AIVEN KE LIYE ZAROORI HAI
+    host: process.env.DB_HOST, // Render yahan se value uthayega
+    user: process.env.DB_USER, // Render yahan se value uthayega
+    password: process.env.DB_PASSWORD, // Render yahan se value uthayega
+    database: 'defaultdb',
+    port: process.env.DB_PORT, // Render yahan se value uthayega
+    ssl: { rejectUnauthorized: false }         // <-- YEH LINE AIVEN KE LIYE ZAROORI HAI
 });
 
 // Check karte hain ki Pool connect hua ya nahi
@@ -61,8 +58,8 @@ const transporter = nodemailer.createTransport({
     secure: true,          // 587 ke liye secure: false rakhein
     requireTLS: true,       // TLS zaroori hai
     auth: {
-        user: 'nikitamehra898@gmail.com', // !! YAHAN APNA GMAIL ID DAALEIN !!
-        pass: 'oiuu frnn jjid mcor'    // !! YAHAN GMAIL KA APP PASSWORD DAALEIN !!
+        user: process.env.GMAIL_USER, // Render yahan se value uthayega
+        pass: process.env.GMAIL_PASS    // !! YAHAN GMAIL KA APP PASSWORD DAALEIN !!
     }
 });
 
