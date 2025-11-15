@@ -1,222 +1,174 @@
-require('dotenv').config();
-// --- 1. Tools ko import karna ---
 const express = require('express');
-const mysql = require('mysql2'); // Hum 'mysql2' ka use kar rahe hain
+const mysql = require('mysql2');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
+// dotenv ko zaroor import karein agar .env file use kar rahe hain
+require('dotenv').config(); 
 
-// --- 2. Express app ko setup karna ---
 const app = express();
 
+// --- CORS Setup (Aapki Vercel Website ke liye) ---
 const allowedOrigins = [
-    'https://crime-reporting-system-five.vercel.app', // Yahan aapka Vercel link hai
-    // Agar aap local par test karna chahte hain toh yeh rakhein, warna hata dein
-    'http://localhost:3000' 
+    'https://crime-reporting-system-five.vercel.app', 
+    'http://localhost:3000'
 ];
-
 app.use(cors({
     origin: function (origin, callback) {
-        // Check karo ki request kahan se aa rahi hai
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true); // Allow karo
+            callback(null, true);
         } else {
-            callback(new Error('CORS Error: This origin is not allowed.')); // Block karo
+            callback(new Error('CORS Error: This origin is not allowed.'));
         }
     }
 }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- 3. Database Connection (POOL BANANA - YEH HAI FIX) ---
-// createConnection ki jagah createPool ka istemaal
-// --- 3. Database Connection (Aiven Cloud) ---
+// --- 1. DATABASE SETUP (Aiven) ---
 const pool = mysql.createPool({
-    host: process.env.DB_HOST, // Render yahan se value uthayega
-    user: process.env.DB_USER, // Render yahan se value uthayega
-    password: process.env.DB_PASSWORD, // Render yahan se value uthayega
-    database: 'defaultdb',
-    port: process.env.DB_PORT, // Render yahan se value uthayega
-    ssl: { rejectUnauthorized: false }         // <-- YEH LINE AIVEN KE LIYE ZAROORI HAI
+    host: process.env.DB_HOST || 'crime-db-online-nikitamehra767-b937.k.aivencloud.com',       
+    user: process.env.DB_USER || 'avnadmin',                            
+    password: process.env.DB_PASSWORD || 'AVNS_QEwVq7AK7QbHinM5Pvw', 
+    database: process.env.DB_NAME || 'defaultdb',                       
+    port: process.env.DB_PORT || 25890, 
+    waitForConnections: true,
+    connectionLimit: 5,
+    queueLimit: 0,
+    connectTimeout: 20000, 
+    ssl: { rejectUnauthorized: false } 
 });
 
-// Check karte hain ki Pool connect hua ya nahi
 pool.getConnection((err, connection) => {
     if (err) {
-        console.error('Database pool connection failed:', err.stack);
-        return;
+        console.error('❌ DATABASE CONNECTION FAILED:', err.message);
+    } else {
+        console.log('✅ Successfully connected to Aiven Database.');
+        connection.release();
     }
-    console.log('Successfully connected to database (crime_db) using pool.');
-    connection.release(); // Connection ko waapis pool mein bhej do
 });
 
-// --- Email Transporter Setup ---
+// --- 2. EMAIL SETUP ---
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // 'service: gmail' hata kar 'host' use karein
-    port: 465,              // Port 587 use karein (yeh kam block hota hai)
-    secure: true,          // 587 ke liye secure: false rakhein
-    requireTLS: true,       // TLS zaroori hai
+    host: 'smtp.gmail.com', 
+    port: 465,              
+    secure: true,           
     auth: {
-        user: process.env.GMAIL_USER, // Render yahan se value uthayega
-        pass: process.env.GMAIL_PASS    // !! YAHAN GMAIL KA APP PASSWORD DAALEIN !!
-    }
+        user: process.env.GMAIL_USER || 'nikitamehra898@gmail.com', // !! APNA EMAIL !!
+        pass: process.env.GMAIL_PASS || 'oiuufrnnjjidmcor'    // !! APNA APP PASSWORD !!
+    },
+    connectionTimeout: 10000
 });
 
 transporter.verify((error, success) => {
-    if (error) {
-        console.error('Error setting up email transporter:', error);
-    } else {
-        console.log('Email transporter is ready to send emails.');
-    }
+    if (error) console.error('⚠️ Email Warning:', error.message);
+    else console.log('✅ Email transporter is ready.');
 });
 
-// --- Multer (File Storage) ka Setup ---
+// --- 3. MULTER SETUP ---
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
+    destination: (req, file, cb) => { cb(null, 'uploads/'); },
+    filename: (req, file, cb) => { cb(null, Date.now() + '-' + file.originalname); }
 });
 const upload = multer({ storage: storage });
 
-// --- 5. API Routes (URLs) ---
-// Har jagah 'db.query' ko 'pool.query' se badal diya gaya hai
-
-// Test Route
-app.get('/', (req, res) => {
-    res.send('Backend is working!');
-});
+// --- 4. API ROUTES ---
 
 // Route 1: Register
 app.post('/api/register', (req, res) => {
     const { username, password, email, full_name, role } = req.body;
     const sql = "INSERT INTO Users (username, password, email, full_name, role) VALUES (?, ?, ?, ?, ?)";
-    
-    // db.query -> pool.query
     pool.query(sql, [username, password, email, full_name, role], (err, result) => {
         if (err) {
-            console.error(err);
-            return res.status(500).send({ message: 'Error registering user', error: err });
+            console.error("Register Error:", err);
+            return res.status(500).send({ message: 'Username or Email might already exist.' });
         }
         res.status(201).send({ message: 'User registered successfully!' });
     });
 });
 
-
-// Route 2: File Complaint (With Location, Video & New Email Format)
+// --- YEH HAI MAIN FIX ---
+// Route 2: File Complaint
 app.post('/api/complaints', upload.single('evidence'), (req, res) => {
-    
-    // 1. Data nikaalo (Latitude/Longitude ke saath)
     const { user_id, title, description, location, latitude, longitude } = req.body;
-    
-    // Null check for location
     const lat = (latitude === 'null' || latitude === 'undefined') ? null : latitude;
     const lon = (longitude === 'null' || longitude === 'undefined') ? null : longitude;
-    
-    // Video/Image path fix
     const evidenceUrl = req.file ? req.file.path.replace(/\\/g, '/') : null; 
-
-    // 2. Database mein save karo
+    
     const sql = "INSERT INTO Complaints (user_id, title, description, location, latitude, longitude, evidence_url) VALUES (?, ?, ?, ?, ?, ?, ?)";
     
+    // 1. Complaint ko Database mein save karo
     pool.query(sql, [user_id, title, description, location, lat, lon, evidenceUrl], (err, result) => {
         if (err) {
-            console.error(err);
-            return res.status(500).send({ message: 'Error filing complaint', error: err });
+            console.error("Complaint Save Error:", err);
+            // Agar DB mein save nahi hua, tab error bhejo
+            return res.status(500).send({ message: 'Error filing complaint. Database issue.' });
         }
         
+        // 2. Database save hote hi, TURANT user ko response bhejo
         res.status(201).send({ message: 'Complaint filed successfully!', complaint_id: result.insertId });
 
-        // 3. Email Notification Logic (Updated HTML)
-        const complaintId = result.insertId;
-        const emailQuery = "SELECT email FROM Users WHERE (role = 'police' OR role = 'admin') AND email IS NOT NULL";
-        
-        pool.query(emailQuery, (emailErr, users) => {
-            if (emailErr) { 
-                console.error("Error fetching emails:", emailErr);
-            } 
-            else if (users.length > 0) {
-                const emailList = users.map(user => user.email).join(', ');
-                
-                // Google Maps Link banana
-                let googleMapsLink = "#";
-                if (lat && lon) {
-                    googleMapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
-                }
-
-                const mailOptions = {
-                    from: `"Crime Reporting System" <nikitamehra898@gmail.com>`, // !! APNA EMAIL YAHAN CHECK KAREIN !!
-                    to: emailList,
-                    subject: `🚨 ACTION REQUIRED: New Complaint #${complaintId} at ${location}`,
-                    html: `
-                        <div style="font-family: Arial, sans-serif; border: 1px solid #ddd; padding: 20px; max-width: 600px; border-top: 5px solid #d32f2f;">
-                            <h2 style="color: #d32f2f;">New Crime Reported</h2>
-                            <p><strong>Title:</strong> ${title}</p>
-                            <p><strong>Description:</strong> ${description}</p>
-                            <hr style="border: 0; border-top: 1px solid #eee;" />
-                            
-                            <h3>📍 Location Details</h3>
-                            <p><strong>Reported Address:</strong> ${location}</p>
-                            
-                            ${lat && lon ? 
-                                `<p style="margin-top: 15px;">
-                                    <strong>Live GPS Location Detected:</strong><br/><br/>
-                                    <a href="${googleMapsLink}" style="background-color: #1565C0; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                                        📍 View Exact Location on Google Maps
-                                    </a>
-                                </p>` 
-                                : 
-                                `<p style="color: red; font-weight: bold;">⚠️ User did not share GPS location.</p>`
-                            }
-                            
-                            <hr style="border: 0; border-top: 1px solid #eee; margin-top: 20px;" />
-                            <p style="font-size: 12px; color: #666;">
-                                Please login to the <a href="http://localhost:3000">Police Dashboard</a> to view evidence (Photos/Videos) and take action.
-                            </p>
-                        </div>
-                    `
-                };
-
-                transporter.sendMail(mailOptions, (mailError, info) => {
-                    if (mailError) {
-                        console.error('Error sending notification email:', mailError);
-                    } else {
-                        console.log('Notification email sent successfully to:', emailList);
-                    }
-                });
-            }
-        });
+        // 3. Ab, background mein araam se email bhejo
+        console.log("Complaint saved. Sending email in background...");
+        sendEmailNotification(result.insertId, title, description, location, lat, lon);
     });
 });
 
-// Route 3: Get all Complaints (Yeh Police/Admin Dashboard ke liye hai)
+// Email bhejne ke liye alag function (taaki crash na ho)
+function sendEmailNotification(complaintId, title, description, location, lat, lon) {
+    const emailQuery = "SELECT email FROM Users WHERE (role = 'police' OR role = 'admin') AND email IS NOT NULL";
+    
+    pool.query(emailQuery, (emailErr, users) => {
+        if (emailErr) {
+            console.error("Email DB Error:", emailErr.message);
+            return;
+        }
+        if (users.length > 0) {
+            const emailList = users.map(user => user.email).join(', ');
+            let googleMapsLink = (lat && lon) ? `https://www.google.com/maps?q=${lat},${lon}` : "#";
+
+            const mailOptions = {
+                from: `"Crime Reporting System" <${process.env.GMAIL_USER || 'YOUR_GMAIL_ID'}>`, // !! APNA EMAIL CHECK KAREIN !!
+                to: emailList,
+                subject: `🚨 New Complaint (#${complaintId}) at ${location}`,
+                html: `
+                    <p>New complaint reported:</p>
+                    <p><b>Title:</b> ${title}</p>
+                    <p><b>Location:</b> ${location}</p>
+                    <p><b>GPS Map:</b> <a href="${googleMapsLink}">Click to View</a></p>
+                `
+            };
+
+            // Email bhejo (Fail hone par crash mat karo)
+            transporter.sendMail(mailOptions)
+                .then(info => console.log('Notification email sent successfully to:', emailList))
+                .catch(err => console.error('Email Failed to Send (Ignored):', err.message));
+        }
+    });
+}
+// --- FIX KHATAM ---
+
+// Route 3: Get All Complaints
 app.get('/api/complaints', (req, res) => {
     const sql = "SELECT * FROM Complaints ORDER BY created_at DESC";
-    // db.query -> pool.query
     pool.query(sql, (err, results) => {
         if (err) {
-            console.error(err);
-            return res.status(500).send({ message: 'Error fetching complaints', error: err });
+            console.error("Get Complaints Error:", err);
+            return res.status(500).send({ message: 'Error fetching data' });
         }
         res.status(200).json(results);
     });
 });
 
-/// Route 4: Login (Fixed - No Role Required)
+// Route 4: Login
 app.post('/api/login', (req, res) => {
-    const { username, password } = req.body; // Sirf username aur password lo
-
-    // Humne role ka check hata diya hai
-    
+    const { username, password } = req.body; 
     const sql = "SELECT * FROM Users WHERE username = ? AND password = ?";
-    
     pool.query(sql, [username, password], (err, results) => {
         if (err) {
-            console.error(err);
-            return res.status(500).send({ message: 'Database error', error: err });
+            console.error("Login Error:", err);
+            return res.status(500).send({ message: 'Database error' });
         }
         if (results.length > 0) {
             const user = results[0];
@@ -228,43 +180,42 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// Route 5: Get complaints for a specific citizen (Citizen "My Complaints" page)
+// Route 5: Citizen Complaints
 app.get('/api/complaints/citizen/:userId', (req, res) => {
     const { userId } = req.params;
     const sql = "SELECT * FROM Complaints WHERE user_id = ? ORDER BY created_at DESC";
-    
     pool.query(sql, [userId], (err, results) => {
         if (err) {
-            console.error(err);
-            return res.status(500).send({ message: 'Error fetching your complaints', error: err });
+            console.error("My Complaints Error:", err);
+            return res.status(500).send({ message: 'Error fetching data' });
         }
-        // Yeh citizen ki complaints bhejega
         res.status(200).json(results);
     });
 });
 
-// Route 6: Update complaint status (Police/Admin Dashboard se)
+// Route 6: Update Status
 app.put('/api/complaints/status/:id', (req, res) => {
-    const { id } = req.params; // Complaint ki ID
-    const { status } = req.body; // Naya status (jaise 'In Progress')
-
+    const { id } = req.params;
+    const { status } = req.body; 
     const sql = "UPDATE Complaints SET status = ? WHERE complaint_id = ?";
-    
     pool.query(sql, [status, id], (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).send({ message: 'Error updating status', error: err });
-        }
-        if (result.affectedRows === 0) {
-            return res.status(404).send({ message: 'Complaint not found' });
-        }
-        res.status(200).send({ message: 'Status updated successfully' });
+        if (err) return res.status(500).send({ message: 'Error' });
+        res.status(200).send({ message: 'Updated' });
     });
 });
 
-// --- 6. Server ko 'ON' karna ---
-const PORT = 5000;
-app.listen(PORT, () => {
-    console.log(`Backend server is running on http://localhost:${PORT}`);
+// Route 7: Update Details
+app.put('/api/complaints/details/:id', (req, res) => {
+    const { id } = req.params;
+    const { status, priority, category } = req.body;
+    const sql = "UPDATE Complaints SET status = ?, ai_priority = ?, ai_category = ? WHERE complaint_id = ?";
+    pool.query(sql, [status, priority, category, id], (err, result) => {
+        if (err) return res.status(500).send({ message: 'Error' });
+        res.status(200).send({ message: 'Updated' });
+    });
 });
 
+const PORT = process.env.PORT || 5000; // Render ke liye PORT ko update kiya
+app.listen(PORT, () => {
+    console.log(`Backend server is running on port ${PORT}`);
+});
