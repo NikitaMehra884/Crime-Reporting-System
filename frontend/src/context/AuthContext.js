@@ -13,10 +13,10 @@ function AuthProvider({ children }) {
         }
     }, []);
 
-    // --- FINAL FIX: LOGIN FUNCTION ---
+    // --- YEH HAI WOH MAIN FIX ---
     const login = (username, password) => {
         return new Promise((resolve, reject) => {
-            // Render URL
+            // Render URL use kiya gaya hai (HTTPS)
             axios.post('https://crime-backend-ptv8.onrender.com/api/login', { username, password })
                 .then(response => {
                     const loggedInUser = response.data.user; 
@@ -25,8 +25,7 @@ function AuthProvider({ children }) {
                     resolve(response.data); 
                 })
                 .catch(error => {
-                    // YEH HAI FIX: Hum check kar rahe hain ki error.response hai ya nahi
-                    // Agar nahi hai, toh hum 'error' ko 'undefined' hone se bacha rahe hain
+                    // Majboot error handling
                     const errorMessage = error.response && error.response.data ? error.response.data : { message: 'Network or Server connection failed.' };
                     
                     console.error("Login API Failed:", errorMessage);
