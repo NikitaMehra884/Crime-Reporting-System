@@ -1,14 +1,11 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-// 1. Context banana
 const AuthContext = createContext();
 
-// 2. Provider Component banana (jo poore app ko wrap karega)
 function AuthProvider({ children }) {
-    const [user, setUser] = useState(null); // 'user' state, shuru mein null (koi logged-in nahi)
+    const [user, setUser] = useState(null); 
 
-    // Yeh check karega ki kya user pehle se logged-in tha (page refresh hone par)
     useEffect(() => {
         const storedUser = localStorage.getItem('crime_user');
         if (storedUser) {
@@ -16,26 +13,32 @@ function AuthProvider({ children }) {
         }
     }, []);
 
-  // Login function (Simple version, bina role ke)
+    // --- FINAL FIX: LOGIN FUNCTION ---
     const login = (username, password) => {
         return new Promise((resolve, reject) => {
-            // Backend ko ab role nahi bhej rahe hain
+            // Render URL
             axios.post('https://crime-backend-ptv8.onrender.com/api/login', { username, password })
                 .then(response => {
-                    const loggedInUser = response.data.user;
-                    setUser(loggedInUser);
+                    const loggedInUser = response.data.user; 
+                    setUser(loggedInUser); 
                     localStorage.setItem('crime_user', JSON.stringify(loggedInUser));
-                    resolve(response.data);
+                    resolve(response.data); 
                 })
                 .catch(error => {
-                    reject(error.response.data);
+                    // YEH HAI FIX: Hum check kar rahe hain ki error.response hai ya nahi
+                    // Agar nahi hai, toh hum 'error' ko 'undefined' hone se bacha rahe hain
+                    const errorMessage = error.response && error.response.data ? error.response.data : { message: 'Network or Server connection failed.' };
+                    
+                    console.error("Login API Failed:", errorMessage);
+                    reject(errorMessage); 
                 });
         });
     };
+
     // Logout function
     const logout = () => {
-        setUser(null); // User state ko null kar diya
-        localStorage.removeItem('crime_user'); // 'localStorage' se hata diya
+        setUser(null); 
+        localStorage.removeItem('crime_user'); 
     };
 
     return (
