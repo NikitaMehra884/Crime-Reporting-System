@@ -3,32 +3,48 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const nodemailer = require('nodemailer');
 require('dotenv').config(); 
-
-// --- NAYA: CLOUDINARY SETUP ---
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
+const sgMail = require('@sendgrid/mail');
 
-// Apni Cloudinary details yahan daalein (ya .env file se)
+const app = express();
+
+// ==========================================
+// 1. CREDENTIALS SECTION (FILL THIS CAREFULLY)
+// ==========================================
+
+// --- Cloudinary (For Image/Video) ---
 cloudinary.config({ 
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'Root', 
-    api_key: process.env.CLOUDINARY_API_KEY || '558482177117282', 
-    api_secret: process.env.CLOUDINARY_API_SECRET || 'i-hWMD3COFLN_nieBfadGVQJCSs' 
+    cloud_name: 'dkse1hp6f', 
+    api_key:    '558482177117282', 
+    api_secret: 'i-hWMD3COFLN_nieBfadGVQJCSs' 
 });
 
-// Naya Multer Storage (ab yeh Cloudinary par save karega)
+// --- SendGrid (For Emails) ---
+sgMail.setApiKey('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'); 
+const SENDER_EMAIL = 'nikitamehra898@gmail.com'; // e.g., nikita...@gmail.com
+
+// --- Aiven Database (MySQL) ---
+const DB_HOST = 'crime-db-online-nikitamehra767-b937.k.aivencloud.com';
+const DB_USER = 'avnadmin';
+const DB_PASS = 'AVNS_QEwVq7AK7QbHinM5Pvw';
+const DB_NAME = 'defaultdb';
+const DB_PORT = 25890; // Usually 12345 or check dashboard
+
+// ==========================================
+// END OF CREDENTIALS SECTION
+// ==========================================
+
+// --- Cloudinary Storage Config ---
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'crime_evidence', // Cloudinary mein 'crime_evidence' folder ban jayega
-        resource_type: 'auto',    // Photo/Video kuch bhi detect kar lega
-        public_id: (req, file) => Date.now() + '-' + file.originalname,
+        folder: 'crime_evidence',
+        resource_type: 'auto', // Allows both images and videos
     },
 });
-// --- CLOUDINARY SETUP KHATAM ---
-
-const app = express();
+const upload = multer({ storage: storage });
 
 // --- CORS Setup ---
 const allowedOrigins = [
@@ -40,48 +56,36 @@ app.use(cors({
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            callback(null, true); 
+            callback(null, true); // Allow all for now to prevent issues
         }
     }
 }));
 app.use(express.json());
-// '/uploads' ki ab zaroorat nahi hai
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- 1. DATABASE SETUP (Aiven) ---
+// --- Database Connection Pool ---
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'crime-db-online-nikitamehra767-b937.k.aivencloud.com',       
-    user: process.env.DB_USER || 'avnadmin',                            
-    password: process.env.DB_PASSWORD || 'AVNS_QEwVq7AK7QbHinM5Pvw', 
-    database: process.env.DB_NAME || 'defaultdb',                       
-    port: process.env.DB_PORT || 25890, 
+    host: DB_HOST,       
+    user: DB_USER,                            
+    password: DB_PASS, 
+    database: DB_NAME,                       
+    port: DB_PORT, 
     waitForConnections: true,
     connectionLimit: 5,
     queueLimit: 0,
     connectTimeout: 20000, 
     ssl: { rejectUnauthorized: false } 
 });
-pool.getConnection((err, c) => { if(err) console.error(err.message); else console.log('DB Connected'); if(c) c.release(); });
 
-// --- 2. EMAIL SETUP ---
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', port: 465, secure: true,
-    auth: {
-        user: process.env.GMAIL_USER || 'nikitamehra898@gmail.com',
-        pass: process.env.GMAIL_PASS || 'oiuufrnnjjidmcor'
-    }
+pool.getConnection((err, c) => { 
+    if(err) console.error('❌ DB Connection Failed:', err.message); 
+    else { console.log('✅ DB Connected'); c.release(); }
 });
-transporter.verify((e, s) => { if(e) console.error(e.message); else console.log('Email Ready'); });
 
-// --- 3. MULTER AB NAYA STORAGE USE KAREGA ---
-const upload = multer({ storage: storage }); // 'storage' ab Cloudinary wala hai
-
-// --- 4. API ROUTES ---
+// --- ROUTES ---
 app.get('/', (req, res) => { res.send('Backend is Running!'); });
 
 // Route 1: Register
 app.post('/api/register', (req, res) => {
-    // ... (Register ka code same rahega) ...
     const { username, password, email, full_name, role } = req.body;
     const sql = "INSERT INTO Users (username, password, email, full_name, role) VALUES (?, ?, ?, ?, ?)";
     pool.query(sql, [username, password, email, full_name, role], (err, result) => {
@@ -90,88 +94,93 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// Route 2: File Complaint (Code Change)
+// Route 2: File Complaint (Main Logic)
 app.post('/api/complaints', upload.single('evidence'), (req, res) => {
     const { user_id, title, description, location, latitude, longitude } = req.body;
-    const lat = (latitude === 'null' || latitude === 'undefined') ? null : latitude;
-    const lon = (longitude === 'null' || longitude === 'undefined') ? null : longitude;
-    
-    // NAYA: URL ab Cloudinary se aayega ('req.file.path')
-    // Local 'uploads/' folder ki zaroorat nahi
+    const lat = latitude === 'null' ? null : latitude;
+    const lon = longitude === 'null' ? null : longitude;
     const evidenceUrl = req.file ? req.file.path : null; 
     
     const sql = "INSERT INTO Complaints (user_id, title, description, location, latitude, longitude, evidence_url) VALUES (?, ?, ?, ?, ?, ?, ?)";
     
     pool.query(sql, [user_id, title, description, location, lat, lon, evidenceUrl], (err, result) => {
         if (err) {
-            console.error("Complaint Save Error:", err);
+            console.error("DB Save Error:", err);
             return res.status(500).send({ message: 'Database Error' });
         }
         
+        // 1. Success Response immediately
         res.status(201).send({ message: 'Complaint filed successfully!', complaint_id: result.insertId });
-        
-        // Background mein Email (yeh code same hai)
+
+        // 2. Background Email
         sendEmailNotification(result.insertId, title, description, location, lat, lon);
     });
 });
 
-// Helper Function for Email (Same)
+// Helper Function for Email
 function sendEmailNotification(complaintId, title, description, location, lat, lon) {
     const emailQuery = "SELECT email FROM Users WHERE (role = 'police' OR role = 'admin') AND email IS NOT NULL";
     
     pool.query(emailQuery, (emailErr, users) => {
         if (!emailErr && users.length > 0) {
             const emailList = users.map(user => user.email);
-            let googleMapsLink = (lat && lon) ? `https://www.google.com/maps?q=${lat},${lon}` : "#";
+            
+            let googleMapsLink = "#";
+            let locationSection = `<p style="color: #f4a261; font-weight: bold;">⚠️ User did not share GPS location.</p>`;
 
-            // --- YEH HAI AAPKA NAYA HTML EMAIL TEMPLATE ---
+            if (lat && lon) {
+                googleMapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
+                locationSection = `
+                    <p style="font-size: 14px; margin-bottom: 10px;"><strong>Live GPS Location Detected:</strong></p>
+                    <a href="${googleMapsLink}" target="_blank" style="background-color: #1565C0; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-family: sans-serif;">
+                        📍 View Exact Location on Google Maps
+                    </a>
+                `;
+            }
+
+            // --- HTML Email Template ---
             const htmlBody = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-                    <div style="background-color: #333; color: white; padding: 20px;">
-                        <h2 style="margin: 0; color: #d32f2f; font-weight: bold;">🚨 New Crime Reported</h2>
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+                    <div style="background-color: #1a2027; padding: 20px; text-align: center;">
+                        <h2 style="margin: 0; color: #d32f2f; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">🚨 Action Required</h2>
+                        <p style="margin: 5px 0 0; color: #b0bec5; font-size: 14px;">New Complaint #${complaintId}</p>
                     </div>
-                    <div style="padding: 25px; background-color: #222; color: #f1f1f1;">
-                        <p style="font-size: 16px;"><strong>Title:</strong> ${title}</p>
-                        <p style="font-size: 14px; line-height: 1.6;">
-                            <strong>Description:</strong> ${description}
+                    <div style="padding: 30px; color: #333;">
+                        <h3 style="color: #d32f2f; margin-top: 0;">New Crime Reported</h3>
+                        <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #1565C0; margin-bottom: 20px;">
+                            <p style="margin: 5px 0;"><strong>Title:</strong> ${title}</p>
+                            <p style="margin: 5px 0;"><strong>Description:</strong> ${description}</p>
+                        </div>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                        <h4 style="margin-bottom: 10px;">📍 Location Details</h4>
+                        <p style="margin-top: 0;"><strong>Reported Address:</strong> ${location}</p>
+                        ${locationSection}
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                        <p style="font-size: 13px; color: #666; text-align: center;">
+                            Please login to the <a href="https://crime-reporting-system-five.vercel.app/" style="color: #1565C0; font-weight: bold;">Police Dashboard</a> to take action.
                         </p>
-                        <hr style="border: 0; border-top: 1px solid #444; margin: 20px 0;" />
-                        <h3 style="color: #f1f1f1;">Location Details</h3>
-                        <p style="font-size: 14px;"><strong>Reported Address:</strong> ${location}</p>
-                        
-                        ${lat && lon ? `
-                            <p style="font-size: 14px; margin-bottom: 20px;"><strong>Live GPS Location Detected:</strong></p>
-                            <a href="${googleMapsLink}" target="_blank" style="background-color: #1565C0; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                                📍 View Exact Location on Google Maps
-                            </a>
-                        ` : `
-                            <p style="color: #f4a261; font-weight: bold;">⚠️ User did not share GPS location.</p>
-                        `}
-                        
-                        <hr style="border: 0; border-top: 1px solid #444; margin: 25px 0;" />
-                        <p style="font-size: 12px; color: #888;">
-                            Please login to the <a href="https://crime-reporting-system-five.vercel.app/" style="color: #90caf9;">Police Dashboard</a> to view evidence (Photos/Videos) and take action.
-                        </p>
+                    </div>
+                    <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #999;">
+                        © 2025 Police Citizen Portal. Automated System Alert.
                     </div>
                 </div>
             `;
-            // --- HTML TEMPLATE KHATAM ---
 
             const msg = {
                 to: emailList, 
-                from: 'YOUR_VERIFIED_SENDER_EMAIL@gmail.com', // !! YAHAN APNA VERIFIED EMAIL DAALEIN !!
-                subject: `🚨 ACTION REQUIRED: New Complaint #${complaintId} at ${location}`,
-                html: htmlBody // Naya HTML template yahan daala
+               from: 'nikitamehra898@gmail.com',
+                subject: `🚨 URGENT: New Complaint #${complaintId} at ${location}`,
+                html: htmlBody
             };
 
             sgMail.sendMultiple(msg)
-                .then(() => console.log('Notification email sent successfully via SendGrid.'))
-                .catch(err => console.error("SendGrid Error (Background):", err.message));
+                .then(() => console.log('Pro Email Sent via SendGrid'))
+                .catch(err => console.error("SendGrid Error:", err.message));
         }
     });
 }
 
-// Route 3: Get All Complaints (Same)
+// Route 3: Get All Complaints
 app.get('/api/complaints', (req, res) => {
     const sql = "SELECT * FROM Complaints ORDER BY created_at DESC";
     pool.query(sql, (err, results) => {
@@ -180,7 +189,7 @@ app.get('/api/complaints', (req, res) => {
     });
 });
 
-// Route 4: Login (Same)
+// Route 4: Login
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body; 
     const sql = "SELECT * FROM Users WHERE username = ? AND password = ?";
@@ -196,7 +205,7 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// Route 5: Citizen Complaints (Same)
+// Route 5: Citizen Complaints
 app.get('/api/complaints/citizen/:userId', (req, res) => {
     const { userId } = req.params;
     const sql = "SELECT * FROM Complaints WHERE user_id = ? ORDER BY created_at DESC";
@@ -206,7 +215,7 @@ app.get('/api/complaints/citizen/:userId', (req, res) => {
     });
 });
 
-// Route 6: Update Status (Same)
+// Route 6: Update Status
 app.put('/api/complaints/status/:id', (req, res) => {
     const { id } = req.params;
     const { status } = req.body; 
@@ -217,8 +226,11 @@ app.put('/api/complaints/status/:id', (req, res) => {
     });
 });
 
-// Route 7 (AI wala, unused) - (Same)
-app.put('/api/complaints/details/:id', (req, res) => { /* ... */ });
+// Route 7: Update Details
+app.put('/api/complaints/details/:id', (req, res) => {
+    // Not currently used but kept for future AI features
+    res.status(200).send({ message: 'Updated' });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
