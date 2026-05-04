@@ -42,6 +42,7 @@ A full-stack **Crime Reporting System** that allows citizens to report crimes, u
 
 ## 📂 Project Structure
 
+```
 Crime-Reporting-System/
 │
 ├── backend/
@@ -54,19 +55,48 @@ Crime-Reporting-System/
 │
 ├── frontend/
 │   ├── public/
+│   │   ├── background.webp
+│   │   ├── favicon.ico
+│   │   ├── hero-image.jpg
+│   │   ├── index.html
+│   │   ├── logo192.png
+│   │   ├── logo512.png
+│   │   ├── manifest.json
+│   │   └── robots.txt
+│   │
 │   ├── src/
 │   │   ├── components/
-│   │   ├── pages/
+│   │   │   ├── AlertSlider.js
+│   │   │   ├── BottomHelpline.js
+│   │   │   ├── ComplaintForm.js
+│   │   │   ├── Footer.js
+│   │   │   └── Navbar.js
+│   │   │
 │   │   ├── context/
+│   │   │   └── AuthContext.js
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── CitizenComplaintsPage.js
+│   │   │   ├── CitizenServices.js
+│   │   │   ├── CyberCrimeInfo.js
+│   │   │   ├── DashboardPage.js
+│   │   │   ├── HomePage.js
+│   │   │   ├── LandingPage.js
+│   │   │   ├── LawInfo.js
+│   │   │   ├── LoginPage.js
+│   │   │   └── RegisterPage.js
+│   │   │
 │   │   ├── App.js
-│   │   └── index.js
+│   │   ├── index.js
+│   │   └── theme.js
 │   │
 │   ├── package.json
+│   ├── package-lock.json
 │
 ├── README.md
+├── vercel.json
 └── .gitignore
-
----
+```
 
 ## ⚙️ How to Run the Project
 
